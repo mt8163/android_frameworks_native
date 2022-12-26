@@ -35,6 +35,7 @@
 #include <sched.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -1398,6 +1399,26 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
             mHasExplicitIdentity = false;
             mLastTransactionBinderFlags = tr.flags;
 
+            // This is recoding libselinux's getpidcon()
+            // We are in a NDK lib, so we need to keep changes to a minimum
+            bool allocatedSid = false;
+            if(mCallingSid == nullptr && mCallingPid != 0) {
+                char buf[4096];
+                char *path = NULL;
+                (void)asprintf(&path, "/proc/%d/attr/current", mCallingPid);
+                int fd = open(path, O_RDONLY | O_CLOEXEC);
+                if(fd != -1) {
+                    int readRet = read(fd, buf, sizeof(buf)-1);
+                    if(readRet != -1) {
+                        buf[readRet] = 0;
+                        mCallingSid = strdup(buf);
+                        allocatedSid = true;
+                    }
+                    close(fd);
+                }
+            }
+
+
             // ALOGI(">>>> TRANSACT from pid %d sid %s uid %d\n", mCallingPid,
             //    (mCallingSid ? mCallingSid : "<N/A>"), mCallingUid);
 
@@ -1469,6 +1490,7 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
 
             mServingStackPointer = origServingStackPointer;
             mCallingPid = origPid;
+            if(allocatedSid) free((void*)mCallingSid);
             mCallingSid = origSid;
             mCallingUid = origUid;
             mHasExplicitIdentity = origHasExplicitIdentity;
