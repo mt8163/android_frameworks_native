@@ -76,11 +76,11 @@ uint64_t getValidUsageBits() {
             bits = bits | bit;
         }
 
-#ifdef ADDNL_GRALLOC_10_USAGE_BITS
-        uint64_t addnl_bits = static_cast<uint64_t>(ADDNL_GRALLOC_10_USAGE_BITS);
-        ALOGI("Adding additional valid usage bits: 0x%" PRIx64, addnl_bits);
-        bits = bits | addnl_bits;
-#endif
+        if (ADDNL_GRALLOC_10_USAGE_BITS) {
+            uint64_t addnl_bits = static_cast<uint64_t>(ADDNL_GRALLOC_10_USAGE_BITS);
+            ALOGI("Adding additional valid usage bits: 0x%" PRIx64, addnl_bits);
+            bits = bits | addnl_bits;
+        }
 
         return bits;
     }();
@@ -475,8 +475,8 @@ status_t Gralloc4Mapper::isSupported(uint32_t width, uint32_t height, PixelForma
                                      uint32_t layerCount, uint64_t usage,
                                      bool* outSupported) const {
     IMapper::BufferDescriptorInfo descriptorInfo;
-    if (auto error = sBufferDescriptorInfo("isSupported", width, height, format, layerCount, usage,
-                                           &descriptorInfo) != OK) {
+    if (sBufferDescriptorInfo("isSupported", width, height, format, layerCount, usage,
+                              &descriptorInfo) != OK) {
         // Usage isn't known to the HAL or otherwise failed validation.
         *outSupported = false;
         return OK;

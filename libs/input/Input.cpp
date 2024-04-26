@@ -217,6 +217,19 @@ bool isStylusToolType(ToolType toolType) {
     return toolType == ToolType::STYLUS || toolType == ToolType::ERASER;
 }
 
+bool isStylusEvent(uint32_t source, const std::vector<PointerProperties>& properties) {
+    if (!isFromSource(source, AINPUT_SOURCE_STYLUS)) {
+        return false;
+    }
+    // Need at least one stylus pointer for this event to be considered a stylus event
+    for (const PointerProperties& pointerProperties : properties) {
+        if (isStylusToolType(pointerProperties.toolType)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 VerifiedKeyEvent verifiedKeyEventFromKeyEvent(const KeyEvent& event) {
     return {{VerifiedInputEvent::Type::KEY, event.getDeviceId(), event.getEventTime(),
              event.getSource(), event.getDisplayId()},
@@ -499,16 +512,10 @@ void PointerCoords::transform(const ui::Transform& transform) {
 
 // --- PointerProperties ---
 
-bool PointerProperties::operator==(const PointerProperties& other) const {
-    return id == other.id
-            && toolType == other.toolType;
-}
-
 void PointerProperties::copyFrom(const PointerProperties& other) {
     id = other.id;
     toolType = other.toolType;
 }
-
 
 // --- MotionEvent ---
 
